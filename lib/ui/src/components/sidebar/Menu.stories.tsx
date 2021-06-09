@@ -32,7 +32,7 @@ export const Items = () => <TooltipLinkList links={fakemenu} />;
 export const Real = () => <SidebarMenu menu={fakemenu} isHighlighted />;
 
 const DoubleThemeRenderingHack = styled.div({
-  '#root > div:first-child > &': {
+  '#root > [data-side="left"] > &': {
     textAlign: 'right',
   },
 });
@@ -58,6 +58,7 @@ export const Expanded = () => {
     {
       // @ts-ignore
       getShortcutKeys: () => ({}),
+      getAddonsShortcuts: () => ({}),
       versionUpdateAvailable: () => false,
       releaseNotesVersion: () => '6.0.0',
     },
@@ -74,6 +75,7 @@ export const ExpandedWithoutReleaseNotes = () => {
     {
       // @ts-ignore
       getShortcutKeys: () => ({}),
+      getAddonsShortcuts: () => ({}),
       versionUpdateAvailable: () => false,
       releaseNotesVersion: () => undefined,
     },

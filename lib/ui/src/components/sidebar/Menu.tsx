@@ -45,6 +45,22 @@ export const MenuButton = styled(Button)<MenuButtonProps>(({ highlighted, theme 
   position: 'relative',
   overflow: 'visible',
   padding: 7,
+  transition: 'none', // prevents button border from flashing when focused/blurred
+  '&:focus': {
+    background: theme.barBg,
+    boxShadow: 'none',
+  },
+  // creates a pseudo border that does not affect the box model, but is accessible in high contrast mode
+  '&:focus:before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderRadius: '100%',
+    border: `1px solid ${theme.color.secondary}`,
+  },
 
   ...(highlighted && {
     '&:after': {

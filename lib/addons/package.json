@@ -1,6 +1,6 @@
 {
   "name": "@storybook/addons",
-  "version": "6.0.0-rc.19",
+  "version": "6.3.0-rc.0",
   "description": "Storybook addons store",
   "keywords": [
     "storybook"
@@ -14,43 +14,49 @@
     "url": "https://github.com/storybookjs/storybook.git",
     "directory": "lib/addons"
   },
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/storybook"
+  },
   "license": "MIT",
-  "main": "dist/public_api.js",
-  "types": "dist/public_api.d.ts",
+  "sideEffects": false,
+  "main": "dist/cjs/public_api.js",
+  "module": "dist/esm/public_api.js",
+  "types": "dist/ts3.9/public_api.d.ts",
+  "typesVersions": {
+    "<3.8": {
+      "*": [
+        "dist/ts3.4/*"
+      ]
+    }
+  },
   "files": [
     "dist/**/*",
     "README.md",
     "*.js",
-    "*.d.ts",
-    "ts3.5/**/*"
+    "*.d.ts"
   ],
   "scripts": {
     "prepare": "node ../../scripts/prepare.js"
   },
   "dependencies": {
-    "@storybook/api": "6.0.0-rc.19",
-    "@storybook/channels": "6.0.0-rc.19",
-    "@storybook/client-logger": "6.0.0-rc.19",
-    "@storybook/core-events": "6.0.0-rc.19",
-    "@storybook/router": "6.0.0-rc.19",
-    "@storybook/theming": "6.0.0-rc.19",
-    "core-js": "^3.0.1",
-    "global": "^4.3.2",
-    "regenerator-runtime": "^0.13.3"
+    "@storybook/api": "6.3.0-rc.0",
+    "@storybook/channels": "6.3.0-rc.0",
+    "@storybook/client-logger": "6.3.0-rc.0",
+    "@storybook/core-events": "6.3.0-rc.0",
+    "@storybook/router": "6.3.0-rc.0",
+    "@storybook/theming": "6.3.0-rc.0",
+    "core-js": "^3.8.2",
+    "global": "^4.4.0",
+    "regenerator-runtime": "^0.13.7"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": "^16.8.0 || ^17.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0"
   },
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "22f5d0c54ba4c6f04912309a3e93bee8056268a7",
-  "typesVersions": {
-    "<=3.5": {
-      "*": [
-        "ts3.5/*"
-      ]
-    }
-  }
+  "gitHead": "4388d3415eec1726095a480b2d7fe61ce91b88fd",
+  "sbmodern": "dist/modern/public_api.js"
 }

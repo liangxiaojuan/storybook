@@ -36,11 +36,30 @@ export const TableWrapper = styled.table<{ compact?: boolean; inAddonPanel?: boo
       marginBottom: inAddonPanel ? 0 : 40,
 
       'thead th:first-of-type, td:first-of-type': {
-        width: '30%',
+        // intentionally specify thead here
+        width: '25%',
       },
 
       'th:first-of-type, td:first-of-type': {
         paddingLeft: 20,
+      },
+
+      'th:nth-of-type(2), td:nth-of-type(2)': {
+        ...(compact
+          ? null
+          : {
+              // Description column
+              width: '35%',
+            }),
+      },
+
+      'td:nth-of-type(3)': {
+        ...(compact
+          ? null
+          : {
+              // Defaults column
+              width: '15%',
+            }),
       },
 
       'th:last-of-type, td:last-of-type': {
@@ -48,8 +67,8 @@ export const TableWrapper = styled.table<{ compact?: boolean; inAddonPanel?: boo
         ...(compact
           ? null
           : {
-              minWidth: '15%',
-              maxWidth: '25%',
+              // Controls column
+              width: '25%',
             }),
       },
 
@@ -114,6 +133,25 @@ export const TableWrapper = styled.table<{ compact?: boolean; inAddonPanel?: boo
             : `rgba(0, 0, 0, 0.20) 0 2px 5px 1px,
           ${opacify(0.05, theme.appBorderColor)} 0 0 0 1px`),
         borderRadius: theme.appBorderRadius,
+
+        // for safari only
+        // CSS hack courtesy of https://stackoverflow.com/questions/16348489/is-there-a-css-hack-for-safari-only-not-chrome
+        '@media not all and (min-resolution:.001dpcm)': {
+          '@supports (-webkit-appearance:none)': {
+            borderWidth: 1,
+            borderStyle: 'solid',
+            ...(inAddonPanel && {
+              borderColor: 'transparent',
+            }),
+
+            ...(!inAddonPanel && {
+              borderColor:
+                theme.base === 'light'
+                  ? transparentize(0.035, theme.appBorderColor)
+                  : opacify(0.05, theme.appBorderColor),
+            }),
+          },
+        },
 
         tr: {
           background: 'transparent',
@@ -193,6 +231,15 @@ export enum ArgsTableError {
   ARGS_UNSUPPORTED = 'Args unsupported. See Args documentation for your framework.',
 }
 
+export type SortType = 'alpha' | 'requiredFirst' | 'none';
+type SortFn = (a: ArgType, b: ArgType) => number;
+
+const sortFns: Record<SortType, SortFn | null> = {
+  alpha: (a: ArgType, b: ArgType) => a.name.localeCompare(b.name),
+  requiredFirst: (a: ArgType, b: ArgType) =>
+    Number(!!b.type?.required) - Number(!!a.type?.required) || a.name.localeCompare(b.name),
+  none: undefined,
+};
 export interface ArgsTableRowProps {
   rows: ArgTypes;
   args?: Args;
@@ -200,6 +247,8 @@ export interface ArgsTableRowProps {
   resetArgs?: (argNames?: string[]) => void;
   compact?: boolean;
   inAddonPanel?: boolean;
+  initialExpandedArgs?: boolean;
+  sort?: SortType;
 }
 
 export interface ArgsTableErrorProps {
@@ -220,7 +269,7 @@ type Sections = {
   sections: Record<string, Section>;
 };
 
-const groupRows = (rows: ArgType) => {
+const groupRows = (rows: ArgType, sort: SortType) => {
   const sections: Sections = { ungrouped: [], ungroupedSubsections: {}, sections: {} };
   if (!rows) return sections;
 
@@ -244,7 +293,37 @@ const groupRows = (rows: ArgType) => {
       sections.ungrouped.push({ key, ...row });
     }
   });
-  return sections;
+
+  // apply sort
+  const sortFn = sortFns[sort];
+
+  const sortSubsection = (record: Record<string, Subsection>) => {
+    if (!sortFn) return record;
+    return Object.keys(record).reduce<Record<string, Subsection>>(
+      (acc, cur) => ({
+        ...acc,
+        [cur]: record[cur].sort(sortFn),
+      }),
+      {}
+    );
+  };
+
+  const sorted = {
+    ungrouped: sections.ungrouped.sort(sortFn),
+    ungroupedSubsections: sortSubsection(sections.ungroupedSubsections),
+    sections: Object.keys(sections.sections).reduce<Record<string, Section>>(
+      (acc, cur) => ({
+        ...acc,
+        [cur]: {
+          ungrouped: sections.sections[cur].ungrouped.sort(sortFn),
+          subsections: sortSubsection(sections.sections[cur].subsections),
+        },
+      }),
+      {}
+    ),
+  };
+
+  return sorted;
 };
 
 /**
@@ -264,9 +343,21 @@ export const ArgsTable: FC<ArgsTableProps> = (props) => {
     );
   }
 
-  const { rows, args, updateArgs, resetArgs, compact, inAddonPanel } = props as ArgsTableRowProps;
+  const {
+    rows,
+    args,
+    updateArgs,
+    resetArgs,
+    compact,
+    inAddonPanel,
+    initialExpandedArgs,
+    sort = 'none',
+  } = props as ArgsTableRowProps;
 
-  const groups = groupRows(pickBy(rows, (row) => !row?.table?.disable));
+  const groups = groupRows(
+    pickBy(rows, (row) => !row?.table?.disable),
+    sort
+  );
 
   if (
     groups.ungrouped.length === 0 &&
@@ -288,7 +379,7 @@ export const ArgsTable: FC<ArgsTableProps> = (props) => {
   if (!compact) colSpan += 2;
   const expandable = Object.keys(groups.sections).length > 0;
 
-  const common = { updateArgs, compact, inAddonPanel };
+  const common = { updateArgs, compact, inAddonPanel, initialExpandedArgs };
   return (
     <ResetWrapper>
       <TableWrapper {...{ compact, inAddonPanel }} className="docblock-argstable">

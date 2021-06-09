@@ -14,12 +14,12 @@ So you can develop UI components in isolation without worrying about app specifi
 
 ```sh
 cd my-app
-npx -p @storybook/cli sb init -t html
+npx sb init -t html
 ```
 
 For more information visit: [storybook.js.org](https://storybook.js.org)
 
 ---
 
-Storybook also comes with a lot of [addons](https://storybook.js.org/addons/introduction) and a great API to customize as you wish.
-You can also build a [static version](https://storybook.js.org/basics/exporting-storybook) of your storybook and deploy it anywhere you want.
+Storybook also comes with a lot of [addons](https://storybook.js.org/docs/html/configure/storybook-addons) and a great API to customize as you wish.
+You can also build a [static version](https://storybook.js.org/docs/html/workflows/publish-storybook) of your storybook and deploy it anywhere you want.

@@ -1,3 +1,5 @@
+// also exported from '@storybook/angular' if you can deal with breaking changes in 6.1
+import { Story, Meta } from '@storybook/angular/types-6-0';
 import Button from './button.component';
 
 export default {
@@ -6,10 +8,9 @@ export default {
   argTypes: {
     backgroundColor: { control: 'color' },
   },
-};
+} as Meta;
 
-const Template = (args: Button) => ({
-  component: Button,
+const Template: Story<Button> = (args: Button) => ({
   props: args,
 });
 

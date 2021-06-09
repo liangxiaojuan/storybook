@@ -2,7 +2,7 @@
 import deprecate from 'util-deprecate';
 import dedent from 'ts-dedent';
 import { logger } from '@storybook/client-logger';
-import { StoryFn, Parameters, DecorateStoryFunction } from '@storybook/addons';
+import { StoryFn, Parameters, LoaderFunction, DecorateStoryFunction } from '@storybook/addons';
 import { toId } from '@storybook/csf';
 
 import {
@@ -10,6 +10,7 @@ import {
   DecoratorFunction,
   ClientApiAddons,
   StoryApi,
+  ArgsEnhancer,
   ArgTypesEnhancer,
 } from './types';
 import { applyHooks } from './hooks';
@@ -24,7 +25,7 @@ const addDecoratorDeprecationWarning = deprecate(
   () => {},
   `\`addDecorator\` is deprecated, and will be removed in Storybook 7.0.
 Instead, use \`export const decorators = [];\` in your \`preview.js\`.
-Read more at https://github.com/storybookjs/storybook/MIGRATION.md#deprecated-addparameters-and-adddecorator).`
+Read more at https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#deprecated-addparameters-and-adddecorator).`
 );
 export const addDecorator = (decorator: DecoratorFunction, deprecationWarning = true) => {
   if (!singleton)
@@ -39,7 +40,7 @@ const addParametersDeprecationWarning = deprecate(
   () => {},
   `\`addParameters\` is deprecated, and will be removed in Storybook 7.0.
 Instead, use \`export const parameters = {};\` in your \`preview.js\`.
-Read more at https://github.com/storybookjs/storybook/MIGRATION.md#deprecated-addparameters-and-adddecorator).`
+Read more at https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#deprecated-addparameters-and-adddecorator).`
 );
 export const addParameters = (parameters: Parameters, deprecationWarning = true) => {
   if (!singleton)
@@ -48,6 +49,28 @@ export const addParameters = (parameters: Parameters, deprecationWarning = true)
   if (deprecationWarning) addParametersDeprecationWarning();
 
   singleton.addParameters(parameters);
+};
+
+const addLoaderDeprecationWarning = deprecate(
+  () => {},
+  `\`addLoader\` is deprecated, and will be removed in Storybook 7.0.
+Instead, use \`export const loaders = [];\` in your \`preview.js\`.
+Read more at https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#deprecated-addparameters-and-adddecorator).`
+);
+export const addLoader = (loader: LoaderFunction, deprecationWarning = true) => {
+  if (!singleton)
+    throw new Error(`Singleton client API not yet initialized, cannot call addParameters`);
+
+  if (deprecationWarning) addLoaderDeprecationWarning();
+
+  singleton.addLoader(loader);
+};
+
+export const addArgsEnhancer = (enhancer: ArgsEnhancer) => {
+  if (!singleton)
+    throw new Error(`Singleton client API not yet initialized, cannot call addArgsEnhancer`);
+
+  singleton.addArgsEnhancer(enhancer);
 };
 
 export const addArgTypesEnhancer = (enhancer: ArgTypesEnhancer) => {
@@ -99,7 +122,7 @@ export default class ClientApi {
   );
 
   addDecorator = (decorator: DecoratorFunction) => {
-    this._storyStore.addGlobalMetadata({ decorators: [decorator], parameters: {} });
+    this._storyStore.addGlobalMetadata({ decorators: [decorator] });
   };
 
   clearDecorators = deprecate(
@@ -114,7 +137,15 @@ export default class ClientApi {
   );
 
   addParameters = (parameters: Parameters) => {
-    this._storyStore.addGlobalMetadata({ decorators: [], parameters });
+    this._storyStore.addGlobalMetadata({ parameters });
+  };
+
+  addLoader = (loader: LoaderFunction) => {
+    this._storyStore.addGlobalMetadata({ loaders: [loader] });
+  };
+
+  addArgsEnhancer = (enhancer: ArgsEnhancer) => {
+    this._storyStore.addArgsEnhancer(enhancer);
   };
 
   addArgTypesEnhancer = (enhancer: ArgTypesEnhancer) => {
@@ -161,6 +192,7 @@ export default class ClientApi {
       kind: kind.toString(),
       add: () => api,
       addDecorator: () => api,
+      addLoader: () => api,
       addParameters: () => api,
     };
 
@@ -186,6 +218,12 @@ export default class ClientApi {
         throw new Error(`Invalid or missing storyName provided for a "${kind}" story.`);
       }
 
+      if (typeof storyFn !== 'function') {
+        throw new Error(
+          `Cannot load story "${storyName}" in "${kind}" due to invalid format. Storybook expected a function but received ${typeof storyFn} instead.`
+        );
+      }
+
       if (!this._noStoryModuleAddMethodHotDispose && m && m.hot && m.hot.dispose) {
         m.hot.dispose(() => {
           const { _storyStore } = this;
@@ -196,7 +234,7 @@ export default class ClientApi {
 
       const fileName = m && m.id ? `${m.id}` : undefined;
 
-      const { decorators, ...storyParameters } = parameters;
+      const { decorators, loaders, ...storyParameters } = parameters;
       this._storyStore.addStory(
         {
           id,
@@ -205,6 +243,7 @@ export default class ClientApi {
           storyFn,
           parameters: { fileName, ...storyParameters },
           decorators,
+          loaders,
         },
         {
           applyDecorators: applyHooks(this._decorateStory),
@@ -216,18 +255,25 @@ export default class ClientApi {
     api.addDecorator = (decorator: DecoratorFunction<StoryFnReturnType>) => {
       if (hasAdded)
         throw new Error(`You cannot add a decorator after the first story for a kind.
-Read more here: https://github.com/storybookjs/storybook/blob/master/MIGRATION.md#can-no-longer-add-decorators-parameters-after-stories`);
+Read more here: https://github.com/storybookjs/storybook/blob/master/MIGRATION.md#can-no-longer-add-decoratorsparameters-after-stories`);
 
-      this._storyStore.addKindMetadata(kind, { decorators: [decorator], parameters: [] });
+      this._storyStore.addKindMetadata(kind, { decorators: [decorator] });
+      return api;
+    };
+
+    api.addLoader = (loader: LoaderFunction) => {
+      if (hasAdded) throw new Error(`You cannot add a loader after the first story for a kind.`);
+
+      this._storyStore.addKindMetadata(kind, { loaders: [loader] });
       return api;
     };
 
     api.addParameters = (parameters: Parameters) => {
       if (hasAdded)
         throw new Error(`You cannot add parameters after the first story for a kind.
-Read more here: https://github.com/storybookjs/storybook/blob/master/MIGRATION.md#can-no-longer-add-decorators-parameters-after-stories`);
+Read more here: https://github.com/storybookjs/storybook/blob/master/MIGRATION.md#can-no-longer-add-decoratorsparameters-after-stories`);
 
-      this._storyStore.addKindMetadata(kind, { decorators: [], parameters });
+      this._storyStore.addKindMetadata(kind, { parameters });
       return api;
     };
 
